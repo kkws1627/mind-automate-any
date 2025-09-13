@@ -2,41 +2,66 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Definition of the design system. All colors, gradients, fonts, etc should be defined here. 
-All colors MUST be HSL.
-*/
+/* MIND - Model Integrated Network for Delegation Design System */
 
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 222.2 84% 4.9%;
+    /* Dark theme - Primary palette */
+    --background: 222 27% 8%;
+    --foreground: 210 40% 98%;
 
-    --card: 0 0% 100%;
-    --card-foreground: 222.2 84% 4.9%;
+    /* Card surfaces */
+    --card: 222 20% 11%;
+    --card-foreground: 210 40% 98%;
 
-    --popover: 0 0% 100%;
-    --popover-foreground: 222.2 84% 4.9%;
+    /* Popover surfaces */
+    --popover: 222 20% 11%;
+    --popover-foreground: 210 40% 98%;
 
-    --primary: 222.2 47.4% 11.2%;
-    --primary-foreground: 210 40% 98%;
+    /* Brand colors - Blue to Purple gradient system */
+    --primary: 231 98% 65%;
+    --primary-foreground: 222 27% 8%;
+    
+    --primary-glow: 240 100% 70%;
+    --primary-deep: 231 98% 45%;
 
-    --secondary: 210 40% 96.1%;
-    --secondary-foreground: 222.2 47.4% 11.2%;
+    /* Secondary - Subtle grays */
+    --secondary: 222 13% 16%;
+    --secondary-foreground: 210 40% 95%;
 
-    --muted: 210 40% 96.1%;
-    --muted-foreground: 215.4 16.3% 46.9%;
+    /* Muted elements */
+    --muted: 222 13% 13%;
+    --muted-foreground: 215.4 16.3% 65%;
 
-    --accent: 210 40% 96.1%;
-    --accent-foreground: 222.2 47.4% 11.2%;
+    /* Accent - Cyan highlights */
+    --accent: 195 100% 65%;
+    --accent-foreground: 222 27% 8%;
 
+    /* States */
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 210 40% 98%;
 
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
-    --ring: 222.2 84% 4.9%;
+    /* Borders and inputs */
+    --border: 222 13% 20%;
+    --input: 222 13% 16%;
+    --ring: 231 98% 65%;
 
-    --radius: 0.5rem;
+    /* Design tokens */
+    --radius: 0.75rem;
+
+    /* Gradients */
+    --gradient-primary: linear-gradient(135deg, hsl(var(--primary)), hsl(var(--primary-glow)));
+    --gradient-secondary: linear-gradient(135deg, hsl(var(--primary-deep)), hsl(var(--accent)));
+    --gradient-background: linear-gradient(180deg, hsl(var(--background)), hsl(222 20% 6%));
+    
+    /* Shadows */
+    --shadow-primary: 0 10px 40px -10px hsl(var(--primary) / 0.3);
+    --shadow-glow: 0 0 40px hsl(var(--primary-glow) / 0.2);
+    --shadow-card: 0 8px 32px -8px hsl(222 27% 4% / 0.6);
+
+    /* Animations */
+    --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    --transition-spring: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
 
     --sidebar-background: 0 0% 98%;
 
@@ -100,6 +125,34 @@ All colors MUST be HSL.
   }
 
   body {
-    @apply bg-background text-foreground;
+    @apply bg-gradient-to-br from-background to-[hsl(222_20%_6%)] text-foreground antialiased;
+    background-attachment: fixed;
+  }
+}
+
+@layer components {
+  /* MIND custom component styles */
+  .mind-gradient-primary {
+    background: var(--gradient-primary);
+  }
+  
+  .mind-gradient-secondary {
+    background: var(--gradient-secondary);
+  }
+  
+  .mind-shadow-glow {
+    box-shadow: var(--shadow-glow);
+  }
+  
+  .mind-shadow-card {
+    box-shadow: var(--shadow-card);
+  }
+  
+  .mind-transition {
+    transition: var(--transition-smooth);
+  }
+  
+  .mind-transition-spring {
+    transition: var(--transition-spring);
   }
 }
