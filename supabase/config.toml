@@ -1,1 +1,26 @@
 project_id = "adcotdlglpalcauodxsa"
+
+[auth]
+enabled = true
+site_url = "http://localhost:3000"
+additional_redirect_urls = ["https://localhost:3000"]
+
+[auth.external.google]
+enabled = true
+client_id = ""
+secret = ""
+
+[functions.ai-agent]
+verify_jwt = false
+
+[functions.send-confirmation-email]
+verify_jwt = false
+
+[functions.process-email-task]
+verify_jwt = false
+
+[functions.process-shopping-task]
+verify_jwt = false
+
+[functions.process-entertainment-task]
+verify_jwt = false

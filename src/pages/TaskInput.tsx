@@ -1,19 +1,28 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useAuth } from '@/components/AuthProvider';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
-import { ArrowLeft, Send, Sparkles } from 'lucide-react';
+import { ArrowLeft, Send, Sparkles, Brain } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
 
 const TaskInput = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
+  const { user, loading } = useAuth();
   const { toast } = useToast();
   const [taskDescription, setTaskDescription] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
 
   const taskType = searchParams.get('type') || 'messages';
+
+  useEffect(() => {
+    if (!loading && !user) {
+      navigate('/auth');
+    }
+  }, [user, loading, navigate]);
 
   const taskConfig = {
     messages: {
@@ -60,33 +69,78 @@ const TaskInput = () => {
       return;
     }
 
+    if (!user) {
+      toast({
+        title: "Authentication required",
+        description: "Please sign in to submit tasks.",
+        variant: "destructive"
+      });
+      return;
+    }
+
     setIsProcessing(true);
 
-    // Simulate AI processing
-    setTimeout(() => {
+    try {
+      // Call the AI agent
+      const { data, error } = await supabase.functions.invoke('ai-agent', {
+        body: {
+          prompt: taskDescription,
+          taskType: taskType,
+          userEmail: user.email
+        }
+      });
+
+      if (error) {
+        throw error;
+      }
+
       toast({
-        title: "Task received successfully!",
+        title: "Task submitted successfully!",
         description: "MIND is processing your request. You'll receive a confirmation email shortly.",
       });
       
-      setIsProcessing(false);
       setTaskDescription('');
       
-      // Navigate back or to a success page
-      setTimeout(() => navigate('/task-selection'), 2000);
-    }, 2000);
+      // Navigate to task history to see the processing task
+      setTimeout(() => navigate('/task-history'), 2000);
+
+    } catch (error: any) {
+      console.error('Error submitting task:', error);
+      toast({
+        title: "Failed to submit task",
+        description: error.message || "Please try again later.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsProcessing(false);
+    }
   };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-background to-[hsl(222_20%_6%)] flex items-center justify-center">
+        <div className="text-center">
+          <Brain className="h-12 w-12 text-primary mx-auto mb-4 animate-pulse" />
+          <p className="text-muted-foreground">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return null;
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background to-[hsl(222_20%_6%)] p-4">
       <div className="container mx-auto max-w-3xl py-8">
         <Button 
           variant="ghost" 
-          onClick={() => navigate('/task-selection')}
+          onClick={() => navigate('/dashboard')}
           className="mb-6 text-muted-foreground hover:text-foreground"
         >
           <ArrowLeft className="mr-2 h-4 w-4" />
-          Back to Task Selection
+          Back to Dashboard
         </Button>
 
         <Card className="border-border/50 bg-card/50 backdrop-blur-sm mind-shadow-card">
