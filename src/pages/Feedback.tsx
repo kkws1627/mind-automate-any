@@ -8,10 +8,13 @@ import { Label } from '@/components/ui/label';
 import { ArrowLeft, MessageSquare, Star } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/components/AuthProvider';
 
 const Feedback = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { session } = useAuth();
   const [feedback, setFeedback] = useState('');
   const [email, setEmail] = useState('');
   const [rating, setRating] = useState('');
@@ -28,22 +31,52 @@ const Feedback = () => {
       return;
     }
 
+    if (!rating) {
+      toast({
+        title: "Please provide a rating",
+        description: "Help us understand your experience.",
+        variant: "destructive"
+      });
+      return;
+    }
+
     setIsSubmitting(true);
 
-    // Simulate submission
-    setTimeout(() => {
+    try {
+      const { data, error } = await supabase.functions.invoke('submit-feedback', {
+        body: {
+          message: feedback,
+          email: email || null,
+          category,
+          rating
+        },
+        headers: session?.access_token ? {
+          Authorization: `Bearer ${session.access_token}`
+        } : {}
+      });
+
+      if (error) throw error;
+
       toast({
         title: "Feedback submitted successfully!",
         description: "Thank you for helping us improve MIND. We'll review your suggestions.",
       });
       
-      setIsSubmitting(false);
       setFeedback('');
       setEmail('');
       setRating('');
       
       setTimeout(() => navigate('/'), 2000);
-    }, 1500);
+    } catch (error: any) {
+      console.error('Error submitting feedback:', error);
+      toast({
+        title: "Failed to submit feedback",
+        description: "Please try again later.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (

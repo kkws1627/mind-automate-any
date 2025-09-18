@@ -34,6 +34,24 @@ const TaskHistory = () => {
 
     if (user) {
       fetchTasks();
+      
+      // Set up real-time subscription for task updates
+      const channel = supabase
+        .channel('task-updates')
+        .on('postgres_changes', {
+          event: '*',
+          schema: 'public',
+          table: 'tasks',
+          filter: `user_id=eq.${user.id}`
+        }, (payload) => {
+          console.log('Real-time task update:', payload);
+          fetchTasks(); // Refresh tasks when changes occur
+        })
+        .subscribe();
+
+      return () => {
+        supabase.removeChannel(channel);
+      };
     }
   }, [user, loading, navigate]);
 
@@ -128,9 +146,20 @@ const TaskHistory = () => {
 
       {/* Main Content */}
       <main className="container mx-auto px-4 py-8">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold mb-2">Task History</h1>
-          <p className="text-muted-foreground">View and manage all your automation tasks</p>
+        <div className="flex items-center justify-between mb-8">
+          <div>
+            <h1 className="text-3xl font-bold mb-2">Task History</h1>
+            <p className="text-muted-foreground">View and manage all your automation tasks</p>
+          </div>
+          <Button 
+            variant="outline" 
+            onClick={fetchTasks}
+            disabled={isLoading}
+            className="text-muted-foreground hover:text-foreground"
+          >
+            <RefreshCw className={`mr-2 h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
+            Refresh
+          </Button>
         </div>
 
         {tasks.length > 0 ? (

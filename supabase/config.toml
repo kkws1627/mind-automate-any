@@ -24,3 +24,6 @@ verify_jwt = false
 
 [functions.process-entertainment-task]
 verify_jwt = false
+
+[functions.submit-feedback]
+verify_jwt = false
