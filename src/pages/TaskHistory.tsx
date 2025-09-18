@@ -6,6 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { ArrowLeft, Brain, Clock, CheckCircle, XCircle, RefreshCw, Eye } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
 
 interface Task {
   id: string;
@@ -22,9 +23,11 @@ interface Task {
 
 const TaskHistory = () => {
   const navigate = useNavigate();
-  const { user, loading } = useAuth();
+  const { user, loading, session } = useAuth();
+  const { toast } = useToast();
   const [tasks, setTasks] = useState<Task[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [cancellingTasks, setCancellingTasks] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     if (!loading && !user) {
@@ -59,18 +62,78 @@ const TaskHistory = () => {
     if (!user) return;
 
     setIsLoading(true);
-    const { data, error } = await supabase
-      .from('tasks')
-      .select('*')
-      .eq('user_id', user.id)
-      .order('created_at', { ascending: false });
+    try {
+      const { data, error } = await supabase
+        .from('tasks')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false });
 
-    if (error) {
-      console.error('Error fetching tasks:', error);
-    } else {
-      setTasks(data || []);
+      if (error) {
+        console.error('Error fetching tasks:', error);
+        toast({
+          title: "Error loading tasks",
+          description: "Failed to fetch your tasks. Please try again.",
+          variant: "destructive"
+        });
+      } else {
+        setTasks(data || []);
+      }
+    } catch (error) {
+      console.error('Unexpected error fetching tasks:', error);
+      toast({
+        title: "Unexpected error",
+        description: "Something went wrong. Please refresh the page.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsLoading(false);
     }
-    setIsLoading(false);
+  };
+
+  const handleCancelTask = async (taskId: string) => {
+    if (!session?.access_token) {
+      toast({
+        title: "Authentication required",
+        description: "Please sign in to cancel tasks.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setCancellingTasks(prev => new Set(prev).add(taskId));
+
+    try {
+      const { data, error } = await supabase.functions.invoke('cancel-task', {
+        body: { taskId },
+        headers: {
+          Authorization: `Bearer ${session.access_token}`
+        }
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: "Task cancelled",
+        description: "The task has been cancelled successfully.",
+      });
+
+      // Refresh tasks to show updated status
+      fetchTasks();
+    } catch (error: any) {
+      console.error('Error cancelling task:', error);
+      toast({
+        title: "Failed to cancel task",
+        description: error.message || "Please try again later.",
+        variant: "destructive"
+      });
+    } finally {
+      setCancellingTasks(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(taskId);
+        return newSet;
+      });
+    }
   };
 
   if (loading || isLoading) {
@@ -113,6 +176,8 @@ const TaskHistory = () => {
         return 'default';
       case 'failed':
         return 'destructive';
+      case 'cancelled':
+        return 'secondary';
       case 'processing':
         return 'secondary';
       default:
@@ -195,6 +260,31 @@ const TaskHistory = () => {
                       {task.description}
                     </p>
                   </div>
+
+                  {/* Task Controls */}
+                  {task.status === 'processing' && (
+                    <div className="flex gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleCancelTask(task.id)}
+                        disabled={cancellingTasks.has(task.id)}
+                        className="text-red-500 hover:text-red-600 hover:bg-red-50"
+                      >
+                        {cancellingTasks.has(task.id) ? (
+                          <>
+                            <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
+                            Cancelling...
+                          </>
+                        ) : (
+                          <>
+                            <XCircle className="mr-2 h-4 w-4" />
+                            Cancel Task
+                          </>
+                        )}
+                      </Button>
+                    </div>
+                  )}
 
                   {task.ai_interpretation && (
                     <div>

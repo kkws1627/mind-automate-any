@@ -27,3 +27,9 @@ verify_jwt = false
 
 [functions.submit-feedback]
 verify_jwt = false
+
+[functions.cancel-task]
+verify_jwt = false
+
+[functions.gmail-integration]
+verify_jwt = false
