@@ -144,19 +144,26 @@ Return a JSON response with these fields and suggest available options.`
 
     // Trigger appropriate task processor based on type
     let processingResult;
+    let taskStatus = 'processing';
+    
+    console.log(`Routing task ${task.id} of type ${taskType} to appropriate processor`);
+    
     try {
       switch (taskType) {
         case 'messages':
+          console.log('Invoking process-email-task function');
           processingResult = await supabase.functions.invoke('process-email-task', {
             body: { taskId: task.id, interpretation: aiInterpretation, userEmail }
           });
           break;
         case 'shopping':
+          console.log('Invoking process-shopping-task function');
           processingResult = await supabase.functions.invoke('process-shopping-task', {
             body: { taskId: task.id, interpretation: aiInterpretation, userEmail }
           });
           break;
         case 'entertainment':
+          console.log('Invoking process-entertainment-task function');
           processingResult = await supabase.functions.invoke('process-entertainment-task', {
             body: { taskId: task.id, interpretation: aiInterpretation, userEmail }
           });
@@ -165,20 +172,53 @@ Return a JSON response with these fields and suggest available options.`
           throw new Error(`Unknown task type: ${taskType}`);
       }
 
+      console.log('Function invoke result:', processingResult);
+
       if (processingResult.error) {
         console.error('Task processing error:', processingResult.error);
+        taskStatus = 'failed';
+        
+        // Update task status to failed
+        await supabase
+          .from('tasks')
+          .update({
+            status: 'failed',
+            error_message: processingResult.error.message || 'Processing function failed',
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', task.id);
+      } else {
+        console.log('Task processing completed successfully');
+        taskStatus = 'completed';
       }
     } catch (error) {
       console.error('Error triggering task processor:', error);
-      // Don't fail the main request if task processing fails
+      taskStatus = 'failed';
+      
+      // Update task status to failed
+      try {
+        await supabase
+          .from('tasks')
+          .update({
+            status: 'failed',
+            error_message: error.message || 'Failed to trigger task processor',
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', task.id);
+      } catch (updateError) {
+        console.error('Error updating task status:', updateError);
+      }
     }
 
     return new Response(JSON.stringify({
       success: true,
       taskId: task.id,
       interpretation: aiInterpretation,
-      status: 'processing',
-      message: 'Task received and is being processed. You will receive an email confirmation shortly.'
+      status: taskStatus,
+      processingResult: processingResult?.data || null,
+      message: taskStatus === 'failed' 
+        ? 'Task processing failed. Please check your request and try again.'
+        : 'Task received and is being processed. You will receive an email confirmation shortly.'
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
